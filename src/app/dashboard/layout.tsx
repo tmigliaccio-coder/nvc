@@ -25,6 +25,24 @@ const navItems = [
     ),
   },
   {
+    label: "Roster",
+    href: "/dashboard/roster",
+    icon: (
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    ),
+  },
+  {
+    label: "EPK",
+    href: "/dashboard/epk",
+    icon: (
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+      </svg>
+    ),
+  },
+  {
     label: "Transcripts",
     href: "/dashboard/transcripts",
     icon: (
@@ -40,17 +58,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen bg-black flex flex-col">
-      {/* Top bar */}
       <header className="sticky top-0 z-50 border-b border-white/[0.04] bg-black/80 backdrop-blur-xl">
         <div className="flex items-center justify-between px-5 py-3">
           <div className="flex items-center gap-4">
             <Link href="/" className="flex items-center gap-3">
-              <Image src="/nvc-logo.png" alt="NVC" width={28} height={28} className="opacity-70" />
+              <Image src="/nvc-logo.png" alt="NVC" width={24} height={24} className="opacity-50" />
             </Link>
             <div className="h-5 w-px bg-white/[0.08]" />
-            <div>
-              <p className="text-white/80 text-xs font-medium">Tru Management</p>
-              <p className="text-white/25 text-[10px]">Client Dashboard</p>
+            <div className="flex items-center gap-3">
+              <Image src="/tru-logo.png" alt="Tru Management" width={28} height={28} className="rounded-lg" />
+              <div>
+                <p className="text-white/80 text-xs font-medium">Tru Management</p>
+                <p className="text-white/25 text-[10px]">Client Dashboard</p>
+              </div>
             </div>
           </div>
 
@@ -62,15 +82,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </Link>
         </div>
 
-        {/* Nav tabs */}
-        <div className="flex gap-1 px-5 -mb-px">
+        <div className="flex gap-1 px-5 -mb-px overflow-x-auto">
           {navItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`relative flex items-center gap-2 px-4 py-2.5 text-xs transition-colors ${
+                className={`relative flex items-center gap-2 px-4 py-2.5 text-xs whitespace-nowrap transition-colors ${
                   isActive ? "text-white/90" : "text-white/30 hover:text-white/50"
                 }`}
               >
@@ -89,7 +108,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </header>
 
-      {/* Content */}
       <main className="flex-1 px-5 py-6 md:px-8 md:py-8 max-w-6xl w-full mx-auto">
         {children}
       </main>

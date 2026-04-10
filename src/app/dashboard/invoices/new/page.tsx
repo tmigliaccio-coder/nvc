@@ -1,8 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { saveInvoice, type Invoice } from "@/lib/storage";
 
 interface LineItem {
   description: string;
@@ -10,6 +13,7 @@ interface LineItem {
 }
 
 export default function NewInvoicePage() {
+  const router = useRouter();
   const [invoiceNumber, setInvoiceNumber] = useState("2026-004");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [billToName, setBillToName] = useState("");
@@ -18,68 +22,93 @@ export default function NewInvoicePage() {
   const [lineItems, setLineItems] = useState<LineItem[]>([{ description: "", amount: "" }]);
   const [notes, setNotes] = useState("Please Double Check Invoice is Accurate! Payment is due upon receipt.");
   const [showPreview, setShowPreview] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   const addLineItem = () => setLineItems([...lineItems, { description: "", amount: "" }]);
-
   const updateLineItem = (index: number, field: keyof LineItem, value: string) => {
     const updated = [...lineItems];
     updated[index][field] = value;
     setLineItems(updated);
   };
-
   const removeLineItem = (index: number) => {
     if (lineItems.length > 1) setLineItems(lineItems.filter((_, i) => i !== index));
   };
 
   const subtotal = lineItems.reduce((sum, item) => {
-    const num = parseFloat(item.amount.replace(/[^0-9.]/g, "")) || 0;
-    return sum + num;
+    return sum + (parseFloat(item.amount.replace(/[^0-9.]/g, "")) || 0);
   }, 0);
 
   const formatCurrency = (n: number) =>
     new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
 
+  const buildInvoice = (status: Invoice["status"]): Invoice => ({
+    id: `inv-${Date.now()}`,
+    invoiceNumber,
+    date,
+    billToName,
+    billToAddress,
+    campaignScope,
+    lineItems: lineItems.filter((li) => li.description),
+    notes,
+    status,
+    createdAt: new Date().toISOString(),
+  });
+
+  const handleGenerate = () => {
+    saveInvoice(buildInvoice("pending"));
+    setSaved(true);
+    setTimeout(() => router.push("/dashboard/invoices"), 1200);
+  };
+
+  const handleSaveDraft = () => {
+    saveInvoice(buildInvoice("draft"));
+    setSaved(true);
+    setTimeout(() => router.push("/dashboard/invoices"), 800);
+  };
+
   const inputClass =
     "w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3 text-white/90 text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors";
-
   const labelClass = "text-white/25 text-[10px] uppercase tracking-[0.2em] mb-2 block";
+
+  if (saved) {
+    return (
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center justify-center py-24 text-center">
+        <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mb-4">
+          <svg className="w-8 h-8 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+        </div>
+        <h2 className="text-white/90 text-lg font-medium">Invoice Saved</h2>
+        <p className="text-white/30 text-sm mt-1">Redirecting to invoices...</p>
+      </motion.div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-3xl">
       <div className="flex items-center justify-between">
         <div>
-          <Link
-            href="/dashboard/invoices"
-            className="flex items-center gap-1.5 text-white/30 hover:text-white/60 text-xs uppercase tracking-[0.15em] mb-3 transition-colors"
-          >
-            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
+          <Link href="/dashboard/invoices" className="flex items-center gap-1.5 text-white/30 hover:text-white/60 text-xs uppercase tracking-[0.15em] mb-3 transition-colors">
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
             Invoices
           </Link>
           <h1 className="text-xl font-medium text-white/90">New Invoice</h1>
         </div>
-        <button
-          onClick={() => setShowPreview(!showPreview)}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/[0.08] hover:bg-white/[0.14] text-white/80 text-xs uppercase tracking-[0.15em] transition-all duration-300 cursor-pointer"
-        >
+        <button onClick={() => setShowPreview(!showPreview)} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/[0.08] hover:bg-white/[0.14] text-white/80 text-xs uppercase tracking-[0.15em] transition-all duration-300 cursor-pointer">
           {showPreview ? "Edit" : "Preview"}
         </button>
       </div>
 
       {!showPreview ? (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="space-y-6"
-        >
-          {/* From (pre-filled) */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+          {/* From (pre-filled with Tru branding) */}
           <div className="glass rounded-2xl p-6">
             <h3 className="text-white/40 text-[10px] uppercase tracking-[0.3em] mb-4">From</h3>
-            <div className="text-white/60 text-sm space-y-1">
-              <p className="text-white/80 font-medium">Tru Management</p>
-              <p>Contact: Joe Meyer | 508-864-7360 | Joe@trumgmt.org</p>
-              <p>5720 Lunsford Rd. Apt. 3236, Plano, TX, 75024</p>
+            <div className="flex items-start gap-4">
+              <Image src="/tru-logo.png" alt="Tru" width={40} height={40} className="rounded-lg mt-0.5" />
+              <div className="text-white/60 text-sm space-y-1">
+                <p className="text-white/80 font-medium">Tru Management</p>
+                <p>Contact: Joe Meyer | 508-864-7360 | Joe@trumgmt.org</p>
+                <p>5720 Lunsford Rd. Apt. 3236, Plano, TX, 75024</p>
+              </div>
             </div>
           </div>
 
@@ -114,12 +143,7 @@ export default function NewInvoicePage() {
           {/* Campaign Scope */}
           <div className="glass rounded-2xl p-6 space-y-4">
             <h3 className="text-white/40 text-[10px] uppercase tracking-[0.3em] mb-2">Campaign Scope</h3>
-            <textarea
-              className={`${inputClass} min-h-[80px] resize-none`}
-              placeholder="Execution of the P!NK Marketing Campaign, including TikTok influencer campaign, Spotify promotional campaigns..."
-              value={campaignScope}
-              onChange={(e) => setCampaignScope(e.target.value)}
-            />
+            <textarea className={`${inputClass} min-h-[80px] resize-none`} placeholder="Execution of the P!NK Marketing Campaign..." value={campaignScope} onChange={(e) => setCampaignScope(e.target.value)} />
           </div>
 
           {/* Line Items */}
@@ -129,44 +153,23 @@ export default function NewInvoicePage() {
               <div key={i} className="flex gap-3 items-start">
                 <div className="flex-1">
                   <label className={labelClass}>Description</label>
-                  <input
-                    className={inputClass}
-                    placeholder="TikTok influencer campaign + Spotify Promo"
-                    value={item.description}
-                    onChange={(e) => updateLineItem(i, "description", e.target.value)}
-                  />
+                  <input className={inputClass} placeholder="TikTok influencer campaign + Spotify Promo" value={item.description} onChange={(e) => updateLineItem(i, "description", e.target.value)} />
                 </div>
                 <div className="w-36">
-                  <label className={labelClass}>Amount</label>
-                  <input
-                    className={inputClass}
-                    placeholder="$3,000.00"
-                    value={item.amount}
-                    onChange={(e) => updateLineItem(i, "amount", e.target.value)}
-                  />
+                  <label className={labelClass}>Amount ($)</label>
+                  <input className={inputClass} placeholder="3000" value={item.amount} onChange={(e) => updateLineItem(i, "amount", e.target.value)} />
                 </div>
                 {lineItems.length > 1 && (
-                  <button
-                    onClick={() => removeLineItem(i)}
-                    className="mt-6 p-2 text-white/20 hover:text-red-400/60 transition-colors cursor-pointer"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
+                  <button onClick={() => removeLineItem(i)} className="mt-6 p-2 text-white/20 hover:text-red-400/60 transition-colors cursor-pointer">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                   </button>
                 )}
               </div>
             ))}
-            <button
-              onClick={addLineItem}
-              className="flex items-center gap-2 text-white/30 hover:text-white/60 text-xs transition-colors cursor-pointer"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
+            <button onClick={addLineItem} className="flex items-center gap-2 text-white/30 hover:text-white/60 text-xs transition-colors cursor-pointer">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
               Add Line Item
             </button>
-
             <div className="border-t border-white/[0.06] pt-4 mt-4 flex justify-between items-center">
               <span className="text-white/40 text-sm">Subtotal / Final Total</span>
               <span className="text-white/90 text-lg font-semibold">{formatCurrency(subtotal)}</span>
@@ -176,11 +179,7 @@ export default function NewInvoicePage() {
           {/* Notes */}
           <div className="glass rounded-2xl p-6 space-y-4">
             <h3 className="text-white/40 text-[10px] uppercase tracking-[0.3em] mb-2">Notes</h3>
-            <textarea
-              className={`${inputClass} min-h-[60px] resize-none`}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
+            <textarea className={`${inputClass} min-h-[60px] resize-none`} value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
 
           {/* Banking (pre-filled) */}
@@ -196,27 +195,26 @@ export default function NewInvoicePage() {
             </div>
           </div>
 
-          {/* Submit */}
+          {/* Actions */}
           <div className="flex gap-3">
-            <button className="flex-1 py-3.5 rounded-xl bg-white/[0.10] hover:bg-white/[0.16] text-white/90 text-sm uppercase tracking-[0.15em] transition-all duration-300 cursor-pointer font-medium">
+            <button onClick={handleGenerate} className="flex-1 py-3.5 rounded-xl bg-white/[0.10] hover:bg-white/[0.16] text-white/90 text-sm uppercase tracking-[0.15em] transition-all duration-300 cursor-pointer font-medium">
               Generate Invoice
             </button>
-            <button className="px-6 py-3.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-white/40 text-sm uppercase tracking-[0.15em] transition-all duration-300 cursor-pointer">
+            <button onClick={handleSaveDraft} className="px-6 py-3.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-white/40 text-sm uppercase tracking-[0.15em] transition-all duration-300 cursor-pointer">
               Save Draft
             </button>
           </div>
         </motion.div>
       ) : (
-        /* Invoice Preview */
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="glass rounded-2xl p-8 space-y-8"
-        >
-          <div className="border-b border-white/[0.06] pb-6">
-            <h2 className="text-white/90 text-2xl font-bold mb-1">Tru Management</h2>
-            <p className="text-white/40 text-sm">Contact: Joe Meyer | 508-864-7360 | Joe@trumgmt.org</p>
-            <p className="text-white/30 text-sm">5720 Lunsford Rd. Apt. 3236, Plano, TX, 75024</p>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass rounded-2xl p-8 space-y-8">
+          {/* Invoice Preview with Tru logo */}
+          <div className="border-b border-white/[0.06] pb-6 flex items-start justify-between">
+            <div>
+              <h2 className="text-white/90 text-2xl font-bold mb-1">Tru Management</h2>
+              <p className="text-white/40 text-sm">Contact: Joe Meyer | 508-864-7360 | Joe@trumgmt.org</p>
+              <p className="text-white/30 text-sm">5720 Lunsford Rd. Apt. 3236, Plano, TX, 75024</p>
+            </div>
+            <Image src="/tru-logo.png" alt="Tru" width={56} height={56} className="rounded-xl" />
           </div>
 
           <div className="grid grid-cols-2 gap-6">
@@ -245,10 +243,10 @@ export default function NewInvoicePage() {
           <div>
             <p className="text-white/25 text-[10px] uppercase tracking-[0.2em] mb-3">Cost Breakdown</p>
             <div className="space-y-2">
-              {lineItems.filter(li => li.description).map((item, i) => (
+              {lineItems.filter((li) => li.description).map((item, i) => (
                 <div key={i} className="flex justify-between text-sm">
                   <span className="text-white/60">{item.description}</span>
-                  <span className="text-white/80 font-medium">{item.amount}</span>
+                  <span className="text-white/80 font-medium">{formatCurrency(parseFloat(item.amount.replace(/[^0-9.]/g, "")) || 0)}</span>
                 </div>
               ))}
             </div>
