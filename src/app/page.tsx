@@ -58,12 +58,20 @@ export default function Home() {
               className="opacity-90"
             />
           </div>
-          <Link
-            href="/login"
-            className="text-sm text-white/50 hover:text-white transition-colors duration-300 tracking-wider uppercase"
-          >
-            Portal
-          </Link>
+          <div className="flex items-center gap-6">
+            <Link
+              href="/contact"
+              className="text-sm text-white/50 hover:text-white transition-colors duration-300 tracking-wider uppercase"
+            >
+              Contact
+            </Link>
+            <Link
+              href="/login"
+              className="text-sm text-white/50 hover:text-white transition-colors duration-300 tracking-wider uppercase"
+            >
+              Portal
+            </Link>
+          </div>
         </motion.nav>
 
         {/* Hero */}
@@ -113,6 +121,7 @@ export default function Home() {
             variants={fadeUp}
             initial="hidden"
             animate="visible"
+            className="flex flex-col sm:flex-row items-center gap-4"
           >
             <Link
               href="/login"
@@ -129,6 +138,12 @@ export default function Home() {
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
+            </Link>
+            <Link
+              href="/contact"
+              className="text-white/30 hover:text-white/60 text-xs uppercase tracking-[0.2em] transition-colors duration-300"
+            >
+              Book a Call
             </Link>
           </motion.div>
         </main>
