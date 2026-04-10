@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { calcInvoiceTotal, FMT, getArtists, getInvoices, type Artist } from "@/lib/storage";
 
 type LabAppId = "messages" | "campaigns" | "planner" | "finance";
+type MessageTab = "artist" | "weekly" | "general";
 
 interface LabApp {
   id: LabAppId;
@@ -18,6 +19,16 @@ interface CampaignTask {
   task: string;
   due: string;
   status: "todo" | "in_progress" | "review" | "done";
+}
+
+interface WeeklyDraft {
+  weekOf: string;
+  headline: string;
+  wins: string;
+  priorities: string;
+  blockers: string;
+  followers: string;
+  streams: string;
 }
 
 interface PlannerEvent {
@@ -37,13 +48,13 @@ const LAB_APPS: LabApp[] = [
 ];
 
 const campaignTasks: CampaignTask[] = [
-  { id: "t1", owner: "Kid Trunks", task: "Approve final ad creative set", due: "Apr 12", status: "review" },
-  { id: "t2", owner: "Kid Trunks", task: "Submit Marquee targeting sheet", due: "Apr 11", status: "in_progress" },
-  { id: "t3", owner: "Saego", task: "Finalize release assets package", due: "Apr 14", status: "todo" },
-  { id: "t4", owner: "Saego", task: "Upload DSP pitch form", due: "Apr 13", status: "in_progress" },
-  { id: "t5", owner: "Shöckface", task: "Deliver teaser clip set", due: "Apr 10", status: "done" },
-  { id: "t6", owner: "Shöckface", task: "QA scheduled posts", due: "Apr 11", status: "review" },
-  { id: "t7", owner: "Kid Trunks", task: "Campaign recap PDF", due: "Apr 18", status: "todo" },
+  { id: "t1", owner: "Management", task: "Approve final ad creative set", due: "Apr 12", status: "review" },
+  { id: "t2", owner: "Artist", task: "Submit Marquee targeting sheet", due: "Apr 11", status: "in_progress" },
+  { id: "t3", owner: "Management", task: "Finalize release assets package", due: "Apr 14", status: "todo" },
+  { id: "t4", owner: "Both", task: "Upload DSP pitch form", due: "Apr 13", status: "in_progress" },
+  { id: "t5", owner: "Artist", task: "Deliver teaser clip set", due: "Apr 10", status: "done" },
+  { id: "t6", owner: "Management", task: "QA scheduled posts", due: "Apr 11", status: "review" },
+  { id: "t7", owner: "Both", task: "Campaign recap PDF", due: "Apr 18", status: "todo" },
 ];
 
 const plannerEvents: PlannerEvent[] = [
@@ -53,6 +64,29 @@ const plannerEvents: PlannerEvent[] = [
   { id: "e4", artist: "Kid Trunks", title: "Spotify Canvas update", day: "Wed", time: "11:00", channel: "Spotify" },
   { id: "e5", artist: "Saego", title: "Behind the scenes story", day: "Thu", time: "14:30", channel: "Instagram" },
   { id: "e6", artist: "Team", title: "Weekly alignment call", day: "Fri", time: "16:00", channel: "Internal" },
+];
+
+const generalOutreachTemplates = [
+  {
+    id: "promoter",
+    title: "Promoter Follow-up",
+    text: "Hi [PROMOTER], following up on [ARTIST] for [DATE/CITY]. We can hold the date while finalizing logistics and guarantee terms.",
+  },
+  {
+    id: "venue",
+    title: "Venue Hold Request",
+    text: "Hi [VENUE], we want to place a hold for [ARTIST] on [DATE]. Please share room details, settlement terms, and technical specs.",
+  },
+  {
+    id: "sponsor",
+    title: "Sponsor Outreach",
+    text: "Hi [BRAND], we want to discuss a partnership with [ARTIST] around [CAMPAIGN]. Happy to share deliverables and timeline.",
+  },
+  {
+    id: "vendor",
+    title: "Production Coordination",
+    text: "Hi [VENDOR], confirming scope for [PROJECT] on [DATE]. Please send quote, timeline, and delivery checkpoints.",
+  },
 ];
 
 function makeMessages(artists: Artist[]) {
@@ -78,8 +112,19 @@ function statusClasses(status: CampaignTask["status"]) {
 export default function LabsPage() {
   const [artists, setArtists] = useState<Artist[]>([]);
   const [openApp, setOpenApp] = useState<LabAppId | null>(null);
+  const [messageTab, setMessageTab] = useState<MessageTab>("artist");
   const [selectedArtist, setSelectedArtist] = useState("all");
   const [copied, setCopied] = useState<string | null>(null);
+  const [taskRows, setTaskRows] = useState<CampaignTask[]>(campaignTasks);
+  const [weeklyDraft, setWeeklyDraft] = useState<WeeklyDraft>({
+    weekOf: new Date().toISOString().slice(0, 10),
+    headline: "",
+    wins: "",
+    priorities: "",
+    blockers: "",
+    followers: "",
+    streams: "",
+  });
   const [splitGross, setSplitGross] = useState("10000");
   const [splitMgmt, setSplitMgmt] = useState("20");
   const [splitLabel, setSplitLabel] = useState("0");
@@ -99,11 +144,16 @@ export default function LabsPage() {
   const paidRevenue = invoices.filter((i) => i.status === "paid").reduce((sum, i) => sum + calcInvoiceTotal(i).total, 0);
   const messages = useMemo(() => makeMessages(artists), [artists]);
   const filteredMessages = selectedArtist === "all" ? messages : messages.filter((m) => m.artistId === selectedArtist);
+  const activeArtist = artists.find((a) => a.id === selectedArtist) || artists[0];
+  const weeklyPreview = `Hey ${activeArtist?.stageName || "team"}, weekly update (${weeklyDraft.weekOf}): ${weeklyDraft.headline || "No headline yet"}. Wins: ${weeklyDraft.wins || "-"}. Priorities: ${weeklyDraft.priorities || "-"}. Blockers: ${weeklyDraft.blockers || "-"}. Followers: ${weeklyDraft.followers || "-"}. Streams: ${weeklyDraft.streams || "-"}.`;
 
   const copy = async (text: string, id: string) => {
     await navigator.clipboard.writeText(text);
     setCopied(id);
     setTimeout(() => setCopied(null), 1800);
+  };
+  const updateTask = (id: string, patch: Partial<CampaignTask>) => {
+    setTaskRows((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
   };
 
   const gross = Number(splitGross) || 0;
@@ -138,7 +188,7 @@ export default function LabsPage() {
           </div>
           <div className="rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2">
             <p className="text-white/30">Open tasks</p>
-            <p className="text-white/80 font-semibold">{campaignTasks.filter((t) => t.status !== "done").length}</p>
+            <p className="text-white/80 font-semibold">{taskRows.filter((t) => t.status !== "done").length}</p>
           </div>
         </div>
       </div>
@@ -180,25 +230,70 @@ export default function LabsPage() {
               <div className="h-[calc(100%-56px)] overflow-y-auto p-5">
                 {openApp === "messages" && (
                   <div className="space-y-4">
-                    <div className="flex gap-2 flex-wrap">
-                      <button onClick={() => setSelectedArtist("all")} className={`px-3 py-1.5 rounded-lg text-xs ${selectedArtist === "all" ? "bg-white/10 text-white/90" : "bg-white/[0.03] text-white/40"}`}>All Artists</button>
-                      {artists.map((a) => (
-                        <button key={a.id} onClick={() => setSelectedArtist(a.id)} className={`px-3 py-1.5 rounded-lg text-xs ${selectedArtist === a.id ? "bg-white/10 text-white/90" : "bg-white/[0.03] text-white/40"}`}>{a.stageName}</button>
-                      ))}
+                    <div className="flex gap-2">
+                      <button onClick={() => setMessageTab("artist")} className={`px-3 py-1.5 rounded-lg text-xs ${messageTab === "artist" ? "bg-white/10 text-white/90" : "bg-white/[0.03] text-white/40"}`}>Artist Messages</button>
+                      <button onClick={() => setMessageTab("weekly")} className={`px-3 py-1.5 rounded-lg text-xs ${messageTab === "weekly" ? "bg-white/10 text-white/90" : "bg-white/[0.03] text-white/40"}`}>Weekly Updates</button>
+                      <button onClick={() => setMessageTab("general")} className={`px-3 py-1.5 rounded-lg text-xs ${messageTab === "general" ? "bg-white/10 text-white/90" : "bg-white/[0.03] text-white/40"}`}>General Outreach</button>
                     </div>
-                    <div className="grid lg:grid-cols-2 gap-3">
-                      {filteredMessages.map((msg) => (
-                        <div key={msg.id} className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <p className="text-white/80 text-sm">{msg.title}</p>
-                            <button onClick={() => copy(msg.text, msg.id)} className="text-[11px] text-white/45 hover:text-white/80 uppercase tracking-[0.12em]">
-                              {copied === msg.id ? "Copied" : "Copy"}
-                            </button>
-                          </div>
-                          <p className="text-white/45 text-sm leading-relaxed">{msg.text}</p>
+
+                    {messageTab === "artist" && (
+                      <>
+                        <div className="flex gap-2 flex-wrap">
+                          <button onClick={() => setSelectedArtist("all")} className={`px-3 py-1.5 rounded-lg text-xs ${selectedArtist === "all" ? "bg-white/10 text-white/90" : "bg-white/[0.03] text-white/40"}`}>All Artists</button>
+                          {artists.map((a) => (
+                            <button key={a.id} onClick={() => setSelectedArtist(a.id)} className={`px-3 py-1.5 rounded-lg text-xs ${selectedArtist === a.id ? "bg-white/10 text-white/90" : "bg-white/[0.03] text-white/40"}`}>{a.stageName}</button>
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                        <div className="grid lg:grid-cols-2 gap-3">
+                          {filteredMessages.map((msg) => (
+                            <div key={msg.id} className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+                              <div className="flex items-center justify-between mb-2">
+                                <p className="text-white/80 text-sm">{msg.title}</p>
+                                <button onClick={() => copy(msg.text, msg.id)} className="text-[11px] text-white/45 hover:text-white/80 uppercase tracking-[0.12em]">
+                                  {copied === msg.id ? "Copied" : "Copy"}
+                                </button>
+                              </div>
+                              <p className="text-white/45 text-sm leading-relaxed">{msg.text}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+
+                    {messageTab === "weekly" && (
+                      <div className="grid lg:grid-cols-2 gap-3">
+                        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-2">
+                          <input value={weeklyDraft.headline} onChange={(e) => setWeeklyDraft((p) => ({ ...p, headline: e.target.value }))} placeholder="Weekly headline" className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-xs text-white/80" />
+                          <textarea value={weeklyDraft.wins} onChange={(e) => setWeeklyDraft((p) => ({ ...p, wins: e.target.value }))} placeholder="Key wins" className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-xs text-white/80" />
+                          <textarea value={weeklyDraft.priorities} onChange={(e) => setWeeklyDraft((p) => ({ ...p, priorities: e.target.value }))} placeholder="Priorities" className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-xs text-white/80" />
+                          <div className="grid grid-cols-2 gap-2">
+                            <input value={weeklyDraft.followers} onChange={(e) => setWeeklyDraft((p) => ({ ...p, followers: e.target.value }))} placeholder="Followers delta" className="bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-xs text-white/80" />
+                            <input value={weeklyDraft.streams} onChange={(e) => setWeeklyDraft((p) => ({ ...p, streams: e.target.value }))} placeholder="Streams delta" className="bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-xs text-white/80" />
+                          </div>
+                          <button onClick={() => copy(weeklyPreview, "weekly-preview")} className="px-3 py-2 rounded-lg bg-white/10 text-white/80 text-xs uppercase tracking-[0.12em]">{copied === "weekly-preview" ? "Copied" : "Copy Weekly Update"}</button>
+                        </div>
+                        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+                          <p className="text-white/70 text-xs mb-2 uppercase tracking-[0.12em]">Preview</p>
+                          <p className="text-white/45 text-sm leading-relaxed">{weeklyPreview}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {messageTab === "general" && (
+                      <div className="grid lg:grid-cols-2 gap-3">
+                        {generalOutreachTemplates.map((tpl) => (
+                          <div key={tpl.id} className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-white/80 text-sm">{tpl.title}</p>
+                              <button onClick={() => copy(tpl.text, tpl.id)} className="text-[11px] text-white/45 hover:text-white/80 uppercase tracking-[0.12em]">
+                                {copied === tpl.id ? "Copied" : "Copy"}
+                              </button>
+                            </div>
+                            <p className="text-white/45 text-sm leading-relaxed">{tpl.text}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -207,19 +302,19 @@ export default function LabsPage() {
                     <div className="grid md:grid-cols-4 gap-3">
                       <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
                         <p className="text-white/35 text-[10px] uppercase tracking-[0.15em]">To Do</p>
-                        <p className="text-white/80 text-lg font-semibold mt-1">{campaignTasks.filter((t) => t.status === "todo").length}</p>
+                        <p className="text-white/80 text-lg font-semibold mt-1">{taskRows.filter((t) => t.status === "todo").length}</p>
                       </div>
                       <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
                         <p className="text-white/35 text-[10px] uppercase tracking-[0.15em]">In Progress</p>
-                        <p className="text-white/80 text-lg font-semibold mt-1">{campaignTasks.filter((t) => t.status === "in_progress").length}</p>
+                        <p className="text-white/80 text-lg font-semibold mt-1">{taskRows.filter((t) => t.status === "in_progress").length}</p>
                       </div>
                       <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
                         <p className="text-white/35 text-[10px] uppercase tracking-[0.15em]">Review</p>
-                        <p className="text-white/80 text-lg font-semibold mt-1">{campaignTasks.filter((t) => t.status === "review").length}</p>
+                        <p className="text-white/80 text-lg font-semibold mt-1">{taskRows.filter((t) => t.status === "review").length}</p>
                       </div>
                       <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
                         <p className="text-white/35 text-[10px] uppercase tracking-[0.15em]">Done</p>
-                        <p className="text-white/80 text-lg font-semibold mt-1">{campaignTasks.filter((t) => t.status === "done").length}</p>
+                        <p className="text-white/80 text-lg font-semibold mt-1">{taskRows.filter((t) => t.status === "done").length}</p>
                       </div>
                     </div>
                     <div className="rounded-xl border border-white/10 overflow-hidden">
@@ -229,13 +324,26 @@ export default function LabsPage() {
                         <div className="col-span-2">Due</div>
                         <div className="col-span-2">Status</div>
                       </div>
-                      {campaignTasks.map((task) => (
-                        <div key={task.id} className="grid grid-cols-12 px-4 py-3 border-t border-white/5 text-sm">
+                      {taskRows.map((task) => (
+                        <div key={task.id} className="grid grid-cols-12 px-4 py-3 border-t border-white/5 text-sm items-center">
                           <div className="col-span-5 text-white/75">{task.task}</div>
-                          <div className="col-span-3 text-white/55">{task.owner}</div>
-                          <div className="col-span-2 text-white/45">{task.due}</div>
+                          <div className="col-span-3 text-white/55">
+                            <select value={task.owner} onChange={(e) => updateTask(task.id, { owner: e.target.value })} className="w-full bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/70">
+                              <option>Management</option>
+                              <option>Artist</option>
+                              <option>Both</option>
+                            </select>
+                          </div>
+                          <div className="col-span-2 text-white/45">
+                            <input value={task.due} onChange={(e) => updateTask(task.id, { due: e.target.value })} className="w-full bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/70" />
+                          </div>
                           <div className="col-span-2">
-                            <span className={`px-2 py-1 rounded-md text-[11px] uppercase tracking-[0.12em] ${statusClasses(task.status)}`}>{task.status.replace("_", " ")}</span>
+                            <select value={task.status} onChange={(e) => updateTask(task.id, { status: e.target.value as CampaignTask["status"] })} className={`w-full px-2 py-1 rounded-md text-[11px] uppercase tracking-[0.12em] ${statusClasses(task.status)}`}>
+                              <option value="todo">todo</option>
+                              <option value="in_progress">in progress</option>
+                              <option value="review">review</option>
+                              <option value="done">done</option>
+                            </select>
                           </div>
                         </div>
                       ))}
