@@ -37,12 +37,12 @@ export interface Artist {
   spotify: string;
   website: string;
   bio: string;
-  monthlyListeners?: string;
   followers?: number;
   popularity?: number;
   spotifyImageUrl?: string;
   spotifyId?: string;
   topTracks?: string[];
+  genres?: string[];
   imageUrl?: string;
   status: "active" | "prospect" | "onboarding";
   onboardingStep?: "contact" | "call_scheduled" | "proposal_sent" | "signed";
@@ -179,20 +179,26 @@ const defaultArtists: Artist[] = [
     id: "artist-saego", name: "Saego", stageName: "Saego", genre: "Hip-Hop / R&B",
     email: "", phone: "", instagram: "https://www.instagram.com/1saego/", spotify: "", website: "",
     bio: "Rising artist blending melodic hip-hop with R&B influences. Building a strong following through authentic storytelling and viral social media presence.",
-    monthlyListeners: "—", imageUrl: "/artist-saego.jpg", status: "active", createdAt: "2026-01-15T00:00:00Z",
+    imageUrl: "/artist-saego.jpg", status: "active", createdAt: "2026-01-15T00:00:00Z",
   },
   {
     id: "artist-shockface", name: "Shöckface", stageName: "Shöckface", genre: "Electronic / Bass",
     email: "", phone: "", instagram: "", spotify: "", website: "https://shockfacemusic.com",
     bio: "Electronic producer and DJ known for heavy bass music and genre-bending productions. Creator of the HYPERWAVE brand. Releases include Helium ft. Lauren Martinez, EXÖDIA, and the SPLITTING EP.",
-    monthlyListeners: "—",
     topTracks: ["Helium ft. Lauren Martinez", "EXÖDIA ft. 8Ö8", "I Will Survive", "HEADSHÖT", "QÜICKSAND"],
     status: "active", createdAt: "2026-02-01T00:00:00Z",
   },
   {
     id: "artist-kidtrunks", name: "Kid Trunks", stageName: "Kid Trunks", genre: "Hip-Hop / Rap",
-    email: "", phone: "", instagram: "https://www.instagram.com/kidtrunks/", spotify: "", website: "",
+    email: "", phone: "", instagram: "https://www.instagram.com/kidtrunks/",
+    spotify: "https://open.spotify.com/artist/57SA5Qv24Vydwd6bJnV8fI", website: "",
     bio: "South Florida rapper and member of Members Only collective. Known for his association with XXXTENTACION and Ski Mask the Slump God. Brings raw energy and versatility to every track.",
-    monthlyListeners: "—", imageUrl: "/artist-kidtrunks.jpg", status: "active", createdAt: "2025-11-01T00:00:00Z",
+    imageUrl: "/artist-kidtrunks.jpg",
+    spotifyId: "57SA5Qv24Vydwd6bJnV8fI",
+    spotifyImageUrl: "https://i.scdn.co/image/ab6761610000e5eb1b66fca831695b1629bb0ede",
+    followers: 300322,
+    popularity: 44,
+    topTracks: ["TNT", "H.I.T (feat. XXXTENTACION)", "Purrp Walk", "Faces", "777"],
+    status: "active", createdAt: "2025-11-01T00:00:00Z",
   },
 ];

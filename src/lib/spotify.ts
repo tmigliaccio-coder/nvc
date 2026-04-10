@@ -24,59 +24,76 @@ async function getAccessToken(): Promise<string | null> {
   return cachedToken.token;
 }
 
+export interface SpotifyTrack {
+  name: string;
+  album: string;
+  albumImageUrl: string;
+  popularity: number;
+  durationMs: number;
+  previewUrl: string | null;
+  spotifyUrl: string;
+}
+
 export interface SpotifyArtistData {
   name: string;
   id: string;
-  monthlyListeners: number;
   followers: number;
   genres: string[];
   imageUrl: string;
   popularity: number;
   spotifyUrl: string;
-  topTracks: {
-    name: string;
-    album: string;
-    previewUrl: string | null;
-    popularity: number;
-    durationMs: number;
-  }[];
+  topTracks: SpotifyTrack[];
 }
 
 export async function searchArtist(query: string): Promise<SpotifyArtistData | null> {
   const token = await getAccessToken();
   if (!token) return null;
 
-  const searchRes = await fetch(
-    `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=artist&limit=1`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  if (!searchRes.ok) return null;
+  try {
+    const searchRes = await fetch(
+      `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=artist&limit=1`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (!searchRes.ok) return null;
+    const searchData = await searchRes.json();
+    const artist = searchData.artists?.items?.[0];
+    if (!artist) return null;
 
-  const searchData = await searchRes.json();
-  const artist = searchData.artists?.items?.[0];
-  if (!artist) return null;
+    let topTracks: SpotifyTrack[] = [];
+    try {
+      const tracksRes = await fetch(
+        `https://api.spotify.com/v1/artists/${artist.id}/top-tracks?market=US`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (tracksRes.ok) {
+        const tracksData = await tracksRes.json();
+        topTracks = (tracksData.tracks || []).slice(0, 10).map((t: Record<string, unknown>) => ({
+          name: (t as { name: string }).name,
+          album: ((t as { album: { name: string } }).album)?.name || "",
+          albumImageUrl: ((t as { album: { images: { url: string }[] } }).album)?.images?.[0]?.url || "",
+          popularity: (t as { popularity: number }).popularity || 0,
+          durationMs: (t as { duration_ms: number }).duration_ms || 0,
+          previewUrl: (t as { preview_url: string | null }).preview_url,
+          spotifyUrl: ((t as { external_urls: { spotify: string } }).external_urls)?.spotify || "",
+        }));
+      }
+    } catch { /* top tracks may fail if no premium */ }
 
-  const tracksRes = await fetch(
-    `https://api.spotify.com/v1/artists/${artist.id}/top-tracks?market=US`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  const tracksData = tracksRes.ok ? await tracksRes.json() : { tracks: [] };
+    return {
+      name: artist.name,
+      id: artist.id,
+      followers: artist.followers?.total || 0,
+      genres: artist.genres || [],
+      imageUrl: artist.images?.[0]?.url || "",
+      popularity: artist.popularity || 0,
+      spotifyUrl: artist.external_urls?.spotify || "",
+      topTracks,
+    };
+  } catch {
+    return null;
+  }
+}
 
-  return {
-    name: artist.name,
-    id: artist.id,
-    monthlyListeners: artist.followers?.total || 0,
-    followers: artist.followers?.total || 0,
-    genres: artist.genres || [],
-    imageUrl: artist.images?.[0]?.url || "",
-    popularity: artist.popularity || 0,
-    spotifyUrl: artist.external_urls?.spotify || "",
-    topTracks: (tracksData.tracks || []).slice(0, 10).map((t: Record<string, unknown>) => ({
-      name: (t as { name: string }).name,
-      album: ((t as { album: { name: string } }).album)?.name || "",
-      previewUrl: (t as { preview_url: string | null }).preview_url,
-      popularity: (t as { popularity: number }).popularity,
-      durationMs: (t as { duration_ms: number }).duration_ms,
-    })),
-  };
+export async function getMultipleArtists(queries: string[]): Promise<(SpotifyArtistData | null)[]> {
+  return Promise.all(queries.map((q) => searchArtist(q)));
 }

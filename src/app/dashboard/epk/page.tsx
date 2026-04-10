@@ -161,8 +161,8 @@ function EPKContent() {
 
             <div className="stats grid grid-cols-2 gap-3">
               <div className="stat bg-white/[0.03] rounded-xl p-4">
-                <p className="stat-label text-white/25 text-[10px] uppercase tracking-[0.15em]">Monthly Listeners</p>
-                <p className="stat-value text-white/80 text-xl font-semibold mt-1">{selected.monthlyListeners || "—"}</p>
+                <p className="stat-label text-white/25 text-[10px] uppercase tracking-[0.15em]">Followers</p>
+                <p className="stat-value text-white/80 text-xl font-semibold mt-1">{selected.followers ? selected.followers.toLocaleString() : "—"}</p>
               </div>
               <div className="stat bg-white/[0.03] rounded-xl p-4">
                 <p className="stat-label text-white/25 text-[10px] uppercase tracking-[0.15em]">Genre</p>
