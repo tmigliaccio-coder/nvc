@@ -46,12 +46,19 @@ export default function LoginPage() {
 
   return (
     <div className="relative min-h-screen bg-black flex items-center justify-center overflow-hidden px-6">
-      {/* Background */}
-      <div className="absolute inset-0 pointer-events-none">
+      <noscript>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black px-6 text-center">
+          <p className="text-white/80 text-sm max-w-sm">
+            JavaScript must be enabled to use the NVC login. Turn it on in your browser settings and reload this page.
+          </p>
+        </div>
+      </noscript>
+      {/* Background — does not capture clicks */}
+      <div className="absolute inset-0 pointer-events-none z-0">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-white/[0.015] rounded-full blur-[120px]" />
       </div>
 
-      <div className="relative z-10 w-full max-w-sm">
+      <div className="relative z-20 w-full max-w-sm touch-manipulation">
         {/* Logo */}
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
@@ -59,8 +66,8 @@ export default function LoginPage() {
           transition={{ duration: 0.6 }}
           className="flex justify-center mb-10"
         >
-          <Link href="/">
-            <Image src="/nvc-logo.png" alt="NVC" width={64} height={64} className="opacity-80 hover:opacity-100 transition-opacity" />
+          <Link href="/" className="relative z-30 inline-block">
+            <Image src="/nvc-logo.png" alt="NVC" width={64} height={64} priority className="opacity-80 hover:opacity-100 transition-opacity" />
           </Link>
         </motion.div>
 
@@ -79,8 +86,9 @@ export default function LoginPage() {
 
               <div className="flex flex-col gap-3">
                 <button
+                  type="button"
                   onClick={() => setPortal("admin")}
-                  className="glass glass-hover rounded-2xl p-6 text-left transition-all duration-500 group cursor-pointer"
+                  className="glass glass-hover rounded-2xl p-6 text-left transition-all duration-500 group cursor-pointer active:scale-[0.99]"
                 >
                   <div className="flex items-center justify-between">
                     <div>
@@ -94,8 +102,9 @@ export default function LoginPage() {
                 </button>
 
                 <button
+                  type="button"
                   onClick={() => setPortal("client")}
-                  className="glass glass-hover rounded-2xl p-6 text-left transition-all duration-500 group cursor-pointer"
+                  className="glass glass-hover rounded-2xl p-6 text-left transition-all duration-500 group cursor-pointer active:scale-[0.99]"
                 >
                   <div className="flex items-center justify-between">
                     <div>
@@ -118,6 +127,7 @@ export default function LoginPage() {
               transition={{ duration: 0.4 }}
             >
               <button
+                type="button"
                 onClick={() => setPortal(null)}
                 className="flex items-center gap-2 text-white/30 hover:text-white/60 text-xs uppercase tracking-[0.2em] mb-8 transition-colors cursor-pointer"
               >
