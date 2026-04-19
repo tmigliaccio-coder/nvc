@@ -129,6 +129,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <main className="flex-1 px-5 py-6 md:px-8 md:py-8 max-w-6xl w-full mx-auto">
         {children}
       </main>
+
+      <footer className="border-t border-white/[0.04] py-2 px-5 text-center">
+        <p className="text-white/15 text-[9px] font-mono tracking-wide">
+          {process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA
+            ? `Deploy ${process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA.slice(0, 7)}`
+            : "Deploy local"}
+        </p>
+      </footer>
     </div>
   );
 }
