@@ -102,6 +102,12 @@ export async function POST(req: NextRequest) {
         quantity: 1,
       },
     ],
+    payment_method_types: ["card"],
+    payment_method_options: {
+      card: {
+        request_three_d_secure: "automatic",
+      },
+    },
     success_url: successUrl,
     cancel_url: cancelUrl,
     metadata: {

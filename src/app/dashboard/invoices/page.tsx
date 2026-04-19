@@ -9,6 +9,7 @@ import { deleteInvoice, getInvoices, getInvoiceById, calcInvoiceTotal, FMT, type
 import { downloadInvoicePDF } from "@/lib/invoice-pdf";
 import { encodeInvoiceToken, invoiceToSnapshot, publicInvoiceUrl } from "@/lib/invoice-public";
 import { NVC_COMPANY, NVC_EMAIL } from "@/lib/nvc-brand";
+import { summarizeInvoices } from "@/lib/invoice-stats";
 
 function InvoicesList() {
   const searchParams = useSearchParams();
@@ -46,20 +47,45 @@ function InvoicesList() {
     setViewing((prev) => (prev?.id === id ? null : prev));
   };
 
+  const s = summarizeInvoices(invoices);
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-center gap-3">
           <Image src="/nvc-logo.png" alt="NVC" width={32} height={32} className="rounded-lg opacity-90" />
           <div>
-            <h1 className="text-xl font-medium text-white/90">Invoices</h1>
-            <p className="text-white/30 text-sm mt-1">{invoices.length} invoices</p>
+            <h1 className="text-xl font-medium text-white/90">Invoice hub</h1>
+            <p className="text-white/30 text-sm mt-1">Tru Management–style billing · {NVC_COMPANY} branded</p>
           </div>
         </div>
-        <Link href="/dashboard/invoices/new" className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/[0.08] hover:bg-white/[0.14] text-white/80 text-xs uppercase tracking-[0.15em] transition-all duration-300">
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-          New Invoice
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/dashboard/payments"
+            className="px-4 py-2 rounded-xl border border-[#635BFF]/25 bg-[#635BFF]/10 text-[#c4b5fd] text-xs uppercase tracking-[0.12em] hover:bg-[#635BFF]/20 transition-colors"
+          >
+            Stripe &amp; Apple Pay
+          </Link>
+          <Link href="/dashboard/invoices/new" className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/[0.08] hover:bg-white/[0.14] text-white/80 text-xs uppercase tracking-[0.15em] transition-all duration-300">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+            New Invoice
+          </Link>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[
+          { label: "Total invoices", value: String(s.totalCount), sub: "All statuses" },
+          { label: "Open / pending", value: String(s.openCount), sub: FMT.format(s.openTotal) },
+          { label: "Paid", value: String(s.paidCount), sub: FMT.format(s.paidTotal) },
+          { label: "Public pay links", value: "Active", sub: "Copy from list or modal" },
+        ].map((row) => (
+          <div key={row.label} className="glass rounded-2xl p-4">
+            <p className="text-white/25 text-[10px] uppercase tracking-[0.2em]">{row.label}</p>
+            <p className="text-white/90 text-xl font-semibold mt-2">{row.value}</p>
+            <p className="text-white/20 text-xs mt-1">{row.sub}</p>
+          </div>
+        ))}
       </div>
 
       {/* Invoice viewing modal */}

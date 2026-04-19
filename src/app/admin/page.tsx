@@ -3,6 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { useEffect, useMemo, useState } from "react";
+import { getInvoices, FMT, type Invoice } from "@/lib/storage";
+import { summarizeInvoices } from "@/lib/invoice-stats";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -13,20 +16,29 @@ const fadeUp = {
   }),
 };
 
-const clients = [
+const managedClients = [
   {
+    id: "tru",
     name: "Tru Management",
-    type: "Music Management",
-    status: "active",
-    invoices: 3,
-    revenue: "$10,500",
+    type: "Music management · client workspace",
+    href: "/dashboard",
+    logo: "/tru-logo.png",
+    initials: "TM",
   },
 ];
 
 export default function AdminPage() {
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+
+  useEffect(() => {
+    setInvoices(getInvoices());
+  }, []);
+
+  const stats = useMemo(() => summarizeInvoices(invoices), [invoices]);
+  const totalRevenueDisplay = stats.paidTotal > 0 ? FMT.format(stats.paidTotal) : "—";
+
   return (
     <div className="min-h-screen bg-black">
-      {/* Top bar */}
       <header className="sticky top-0 z-50 border-b border-white/[0.04] bg-black/80 backdrop-blur-xl">
         <div className="flex items-center justify-between px-5 py-3 max-w-6xl mx-auto">
           <div className="flex items-center gap-4">
@@ -36,13 +48,10 @@ export default function AdminPage() {
             <div className="h-5 w-px bg-white/[0.08]" />
             <div>
               <p className="text-white/80 text-xs font-medium">NVC Admin</p>
-              <p className="text-white/25 text-[10px]">Management Console</p>
+              <p className="text-white/25 text-[10px]">Management console</p>
             </div>
           </div>
-          <Link
-            href="/login"
-            className="text-white/30 hover:text-white/60 text-[10px] uppercase tracking-[0.2em] transition-colors"
-          >
+          <Link href="/login" className="text-white/30 hover:text-white/60 text-[10px] uppercase tracking-[0.2em] transition-colors">
             Sign Out
           </Link>
         </div>
@@ -50,17 +59,21 @@ export default function AdminPage() {
 
       <main className="max-w-6xl mx-auto px-5 py-8 space-y-8">
         <motion.div custom={0} variants={fadeUp} initial="hidden" animate="visible">
-          <h1 className="text-xl font-medium text-white/90">Admin Console</h1>
-          <p className="text-white/30 text-sm mt-1">Manage all NVC client portals</p>
+          <h1 className="text-xl font-medium text-white/90">Admin console</h1>
+          <p className="text-white/30 text-sm mt-1">Invoices &amp; client workspaces (same data as the NVC portal)</p>
         </motion.div>
 
-        {/* Overview Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: "Total Clients", value: "1", sub: "1 active" },
-            { label: "Total Revenue", value: "$10,500", sub: "This quarter" },
-            { label: "Open Invoices", value: "3", sub: "Across all clients" },
-            { label: "Active Projects", value: "2", sub: "In progress" },
+            { label: "Invoices (all)", value: String(stats.totalCount), sub: "In this browser" },
+            { label: "Open / pending", value: String(stats.openCount), sub: FMT.format(stats.openTotal) + " outstanding" },
+            { label: "Paid (closed)", value: String(stats.paidCount), sub: totalRevenueDisplay + " collected" },
+            {
+              label: "Stripe & Apple Pay",
+              value: "Pay hub",
+              sub: "Test checkout · wallets",
+              href: "/dashboard/payments",
+            },
           ].map((stat, i) => (
             <motion.div
               key={stat.label}
@@ -71,36 +84,59 @@ export default function AdminPage() {
               className="glass rounded-2xl p-4"
             >
               <p className="text-white/25 text-[10px] uppercase tracking-[0.2em]">{stat.label}</p>
-              <p className="text-white/90 text-2xl font-semibold mt-2">{stat.value}</p>
-              <p className="text-white/20 text-xs mt-1">{stat.sub}</p>
+              {"href" in stat && stat.href ? (
+                <Link href={stat.href} className="block mt-2 group">
+                  <p className="text-white/90 text-2xl font-semibold group-hover:text-white transition-colors">{stat.value}</p>
+                  <p className="text-white/35 text-xs mt-1">{stat.sub}</p>
+                </Link>
+              ) : (
+                <>
+                  <p className="text-white/90 text-2xl font-semibold mt-2">{stat.value}</p>
+                  <p className="text-white/20 text-xs mt-1">{stat.sub}</p>
+                </>
+              )}
             </motion.div>
           ))}
         </div>
 
-        {/* Client List */}
-        <motion.div custom={5} variants={fadeUp} initial="hidden" animate="visible">
+        <motion.div custom={5} variants={fadeUp} initial="hidden" animate="visible" className="flex flex-wrap gap-3">
+          <Link
+            href="/dashboard/invoices"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/[0.08] hover:bg-white/[0.12] text-white/85 text-xs uppercase tracking-[0.12em] transition-colors"
+          >
+            Open invoice hub
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </Link>
+          <Link
+            href="/dashboard/invoices/new"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-white/50 text-xs uppercase tracking-[0.12em] transition-colors"
+          >
+            New invoice
+          </Link>
+        </motion.div>
+
+        <motion.div custom={6} variants={fadeUp} initial="hidden" animate="visible">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-white/25 text-[10px] uppercase tracking-[0.3em]">Client Portals</h2>
-            <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.10] text-white/50 text-xs uppercase tracking-[0.12em] transition-all cursor-pointer">
-              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Add Client
-            </button>
+            <h2 className="text-white/25 text-[10px] uppercase tracking-[0.3em]">Client portals</h2>
+            <span className="text-white/15 text-[10px]">Tru-style billing runs inside NVC portal</span>
           </div>
 
           <div className="glass rounded-2xl overflow-hidden">
-            {clients.map((client, i) => (
+            {managedClients.map((client, i) => (
               <div
-                key={client.name}
-                className={`flex items-center justify-between px-5 py-5 ${
-                  i < clients.length - 1 ? "border-b border-white/[0.04]" : ""
-                }`}
+                key={client.id}
+                className={`flex items-center justify-between px-5 py-5 ${i < managedClients.length - 1 ? "border-b border-white/[0.04]" : ""}`}
               >
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-white/[0.04] flex items-center justify-center">
-                    <span className="text-white/40 text-xs font-bold">TM</span>
-                  </div>
+                  {client.logo ? (
+                    <Image src={client.logo} alt="" width={40} height={40} className="rounded-xl" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-xl bg-white/[0.04] flex items-center justify-center">
+                      <span className="text-white/40 text-xs font-bold">{client.initials}</span>
+                    </div>
+                  )}
                   <div>
                     <p className="text-white/80 text-sm font-medium">{client.name}</p>
                     <p className="text-white/25 text-xs">{client.type}</p>
@@ -108,16 +144,11 @@ export default function AdminPage() {
                 </div>
                 <div className="flex items-center gap-6">
                   <div className="text-right hidden md:block">
-                    <p className="text-white/60 text-sm">{client.revenue}</p>
-                    <p className="text-white/20 text-xs">{client.invoices} invoices</p>
+                    <p className="text-white/60 text-sm">{stats.totalCount} invoices</p>
+                    <p className="text-white/20 text-xs">{FMT.format(stats.openTotal)} open</p>
                   </div>
-                  <span className="text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400/80">
-                    {client.status}
-                  </span>
-                  <Link
-                    href="/dashboard"
-                    className="text-white/30 hover:text-white/60 transition-colors"
-                  >
+                  <span className="text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400/80">active</span>
+                  <Link href={client.href} className="text-white/30 hover:text-white/60 transition-colors" aria-label="Open portal">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
                     </svg>

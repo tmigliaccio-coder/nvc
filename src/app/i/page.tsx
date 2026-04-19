@@ -185,7 +185,9 @@ function PublicInvoiceBody() {
           ) : null}
 
           <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-5 space-y-3">
-            <p className="text-white/50 text-xs">Pay securely with Stripe (cards, wallets). Test mode: use card 4242 4242 4242 4242.</p>
+            <p className="text-white/50 text-xs">
+              Pay with Stripe Checkout — <strong className="text-white/65">Apple Pay</strong> / <strong className="text-white/65">Google Pay</strong> may appear on phone browsers after your domain is added under Stripe → Apple Pay. Card test: 4242 4242 4242 4242.
+            </p>
             {payError ? <p className="text-red-400/90 text-xs">{payError}</p> : null}
             <button
               type="button"
