@@ -7,12 +7,19 @@ import { motion } from "framer-motion";
 import { PaymentsGuide } from "./PaymentsGuide";
 
 type StripeHealth = { ok: boolean; configured: boolean; mode?: string; hint?: string };
+const PRESET_AMOUNTS = [5, 10, 15, 20, 35, 50, 75, 100];
+const MONEY_FMT = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
 export default function PaymentsHubPage() {
-  const [loading, setLoading] = useState(false);
+  const [testLoading, setTestLoading] = useState(false);
+  const [chargeLoading, setChargeLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUrl, setLastUrl] = useState<string | null>(null);
   const [health, setHealth] = useState<StripeHealth | null>(null);
+  const [amountUsd, setAmountUsd] = useState(25);
+  const [customerName, setCustomerName] = useState("");
+  const [itemName, setItemName] = useState("NVC Merch");
+  const [note, setNote] = useState("");
 
   useEffect(() => {
     fetch("/api/stripe/health", { cache: "no-store" })
@@ -24,7 +31,7 @@ export default function PaymentsHubPage() {
   const runTestCheckout = async () => {
     setError(null);
     setLastUrl(null);
-    setLoading(true);
+    setTestLoading(true);
     try {
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
@@ -33,6 +40,8 @@ export default function PaymentsHubPage() {
           amountCents: 500,
           invoiceNumber: "DEMO-001",
           customerName: "Wallet demo",
+          itemName: "NVC Checkout Demo",
+          note: "Quick wallet + card checkout test",
         }),
       });
       const data = await res.json();
@@ -47,7 +56,41 @@ export default function PaymentsHubPage() {
     } catch (e) {
       setError(String(e));
     } finally {
-      setLoading(false);
+      setTestLoading(false);
+    }
+  };
+
+  const runCustomCharge = async () => {
+    setError(null);
+    setLastUrl(null);
+    const bounded = Math.max(5, Math.min(100, amountUsd));
+    const amountCents = Math.round(bounded * 100);
+    setChargeLoading(true);
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amountCents,
+          invoiceNumber: `POS-${new Date().toISOString().slice(0, 10)}`,
+          customerName: customerName.trim() || "Walk-up customer",
+          itemName: itemName.trim() || "NVC custom charge",
+          note: note.trim() || "Created from dashboard quick charge",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(typeof data.error === "string" ? data.error : "Custom checkout failed");
+        return;
+      }
+      if (data.url) {
+        setLastUrl(data.url);
+        window.open(data.url as string, "_blank", "noopener,noreferrer");
+      }
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setChargeLoading(false);
     }
   };
 
@@ -86,6 +129,90 @@ export default function PaymentsHubPage() {
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
+        className="glass rounded-2xl p-6 space-y-5 border border-emerald-500/20"
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-white/90 text-base font-medium">Quick charge (POS)</h2>
+            <p className="text-white/40 text-xs mt-1">
+              Build a one-off Stripe checkout for merch / door / pop-up sales. Range is {MONEY_FMT.format(5)}–{MONEY_FMT.format(100)}.
+            </p>
+          </div>
+          <span className="text-emerald-400/80 text-xs uppercase tracking-[0.18em]">{MONEY_FMT.format(Math.max(5, Math.min(100, amountUsd)))}</span>
+        </div>
+
+        <div className="grid grid-cols-4 gap-2">
+          {PRESET_AMOUNTS.map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => setAmountUsd(n)}
+              className={`rounded-lg border px-2 py-2 text-xs transition-colors cursor-pointer ${
+                amountUsd === n
+                  ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-300/90"
+                  : "border-white/[0.07] bg-white/[0.03] text-white/55 hover:text-white/75"
+              }`}
+            >
+              {MONEY_FMT.format(n)}
+            </button>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label className="text-white/35 text-[10px] uppercase tracking-[0.18em] mb-2 block">Amount (USD)</label>
+            <input
+              type="number"
+              min={5}
+              max={100}
+              step={1}
+              value={amountUsd}
+              onChange={(e) => setAmountUsd(Math.round(Number(e.target.value) || 5))}
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3 text-white/90 text-sm focus:outline-none focus:border-white/20"
+            />
+          </div>
+          <div>
+            <label className="text-white/35 text-[10px] uppercase tracking-[0.18em] mb-2 block">Customer (optional)</label>
+            <input
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+              placeholder="Walk-up customer"
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3 text-white/90 text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20"
+            />
+          </div>
+          <div>
+            <label className="text-white/35 text-[10px] uppercase tracking-[0.18em] mb-2 block">Item / reason</label>
+            <input
+              value={itemName}
+              onChange={(e) => setItemName(e.target.value)}
+              placeholder="NVC Shirt"
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3 text-white/90 text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20"
+            />
+          </div>
+          <div>
+            <label className="text-white/35 text-[10px] uppercase tracking-[0.18em] mb-2 block">Internal note</label>
+            <input
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Concert merch table"
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3 text-white/90 text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20"
+            />
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={runCustomCharge}
+          disabled={chargeLoading}
+          className="w-full py-3.5 rounded-xl bg-emerald-500/80 hover:bg-emerald-500 text-black text-sm font-semibold transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+        >
+          {chargeLoading ? "Creating custom checkout…" : `Charge ${MONEY_FMT.format(Math.max(5, Math.min(100, amountUsd)))}`}
+        </button>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
         className="glass rounded-2xl p-6 space-y-5 border border-[#635BFF]/20"
       >
         <div className="flex items-center gap-2 text-[#a99ffb] text-xs uppercase tracking-[0.2em]">
@@ -113,10 +240,10 @@ export default function PaymentsHubPage() {
         <button
           type="button"
           onClick={runTestCheckout}
-          disabled={loading}
+          disabled={testLoading}
           className="w-full py-3.5 rounded-xl bg-[#635BFF] hover:bg-[#5851e6] text-white text-sm font-medium transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
         >
-          {loading ? "Creating session…" : "Open $5 demo checkout (wallets if available)"}
+          {testLoading ? "Creating session…" : "Open $5 demo checkout (wallets if available)"}
         </button>
       </motion.div>
 

@@ -38,6 +38,8 @@ export async function POST(req: NextRequest) {
     amountCents?: number;
     invoiceNumber?: string;
     customerName?: string;
+    itemName?: string;
+    note?: string;
   };
   try {
     body = await req.json();
@@ -45,7 +47,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { invoiceToken, amountCents: rawCents, invoiceNumber, customerName } = body;
+  const { invoiceToken, amountCents: rawCents, invoiceNumber, customerName, itemName, note } = body;
 
   let amountCents: number;
   let inv: Invoice | null = null;
@@ -75,6 +77,10 @@ export async function POST(req: NextRequest) {
 
   const num = inv?.invoiceNumber ?? invoiceNumber ?? "Invoice";
   const displayName = (inv?.billToName || customerName || "Customer").slice(0, 80);
+  const productName = (itemName?.trim() || num).slice(0, 80);
+  const productDescription = inv
+    ? "New Video Company invoice"
+    : (note?.trim() || "New Video Company payment").slice(0, 200);
 
   const stripe = new Stripe(secret);
   const origin = getOrigin(req);
@@ -94,8 +100,8 @@ export async function POST(req: NextRequest) {
         price_data: {
           currency: "usd",
           product_data: {
-            name: `${num} — ${displayName}`.slice(0, 120),
-            description: "New Video Company invoice",
+            name: `${productName} — ${displayName}`.slice(0, 120),
+            description: productDescription,
           },
           unit_amount: amountCents,
         },
@@ -112,6 +118,9 @@ export async function POST(req: NextRequest) {
     cancel_url: cancelUrl,
     metadata: {
       invoice_number: num,
+      customer_name: displayName,
+      item_name: productName,
+      ...(note?.trim() ? { note: note.trim().slice(0, 300) } : {}),
       ...(inv?.id ? { invoice_id: inv.id } : {}),
     },
   });
