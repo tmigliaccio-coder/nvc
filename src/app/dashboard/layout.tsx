@@ -30,6 +30,20 @@ const navItems = [
     ),
   },
   {
+    label: "Tracker",
+    href: "/dashboard/tracker",
+    icon: (
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M9 17v-6m3 6V7m3 10v-4m5 4H4m16 0a2 2 0 002-2V7a2 2 0 00-2-2M4 17a2 2 0 01-2-2V7a2 2 0 012-2"
+        />
+      </svg>
+    ),
+  },
+  {
     label: "Invoices",
     href: "/dashboard/invoices",
     icon: (

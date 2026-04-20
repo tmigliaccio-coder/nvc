@@ -61,6 +61,12 @@ function InvoicesList() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Link
+            href="/dashboard/tracker"
+            className="px-4 py-2 rounded-xl border border-red-400/30 bg-red-500/10 text-red-200 text-xs uppercase tracking-[0.12em] hover:bg-red-500/20 transition-colors"
+          >
+            Payment tracker
+          </Link>
+          <Link
             href="/dashboard/payments"
             className="px-4 py-2 rounded-xl border border-[#635BFF]/25 bg-[#635BFF]/10 text-[#c4b5fd] text-xs uppercase tracking-[0.12em] hover:bg-[#635BFF]/20 transition-colors"
           >
